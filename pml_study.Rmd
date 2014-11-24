@@ -1,0 +1,113 @@
+Title
+========================================================
+
+Synopsis
+--------------------------------------------------------
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. We need to predict the class of action: exactly according to the specification (Class A), throwing the elbows to the front (Class B), lifting the dumbbell only halfway (Class C), lowering the dumbbell only halfway (Class D) and throwing the hips to the front (Class E).
+
+### Load data
+```{r echo=TRUE}
+# download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", "pml-training.csv", method="curl")
+# download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv", "pml-testing.csv", method="curl")
+training = read.csv("pml-training.csv")
+testing = read.csv("pml-testing.csv")
+```
+
+### Exploring Data
+```{r echo=TRUE}
+unique(training$user_name)
+ncol(training)
+colnames(training)
+head(training[, 1:30])
+pairs(training[1:10000,1:10])
+```
+
+### Cleaning Data
+We can see that the variables of belt, forearm, arm, and dumbell are from index 8 to 159, and the last one classe is the outcome variable. Also, we observed many missing data in many columns. Let's remove those columns.
+```{r echo=TRUE}
+trainingClean = training[, 8:160]
+trainingClean[trainingClean=='' | trainingClean=='NA' | trainingClean=='#DIV/0!'] = NA
+trainingClean = trainingClean[, which(colSums(is.na(trainingClean))==0)]
+```
+
+### Prepare Data
+First of all, we need a validation data set to validate our model. We split the data set to 75% for training and 25% for validating.
+```{r echo=TRUE}
+set.seed(31)
+inTrain = createDataPartition(y=trainingClean$classe, p=0.75, list=FALSE)
+trainingData = trainingClean[inTrain,]
+validationData = trainingClean[-inTrain,]
+```
+
+### Prediction Model
+We are going to try 3 different models to fit the training data and compare their performance with the validation data.
+
+The first one we use is Random Forest.
+```{r echo=TRUE}
+library(caret)
+library(randomForest)
+fit_rf = train(classe~., method="rf", data=trainingData, tuneLength=1, ntree=25,
+               trControl = trainControl(method = "cv", number = 10))
+```
+
+The second one is Naive Bayes.
+```{r echo=TRUE}
+library("klaR")
+fit_nb = naiveBayes(classe~., data=trainingData)
+fit_nb = train(classe~., method="nb", data=trainingData,
+               trControl = trainControl(method = "cv", number = 10))
+
+```
+
+Last one we use Decision Tree.
+```{r echo=TRUE}
+library(rpart)
+fit_rp = train(classe~., method="rpart", data=trainingData,
+               trControl = trainControl(method = "cv", number = 10))
+confusionMatrix(predict(fit_rp, validationData), validationData$classe)
+plot(predict(fit_rp,newdata=validationData[,-ncol(validationData)]),validationData$classe, xlab="Validation", ylab="PredictionModel Set",col = c("black","red", "blue","green","yellow"))
+
+```
+
+For each model, we use the validation data set to test. Let's look at the accuracy first.
+```{r echo=TRUE}
+accurate_rf = c(as.numeric(predict(fit_rf,newdata=validationData[,-ncol(validationData)])==validationData$classe))
+m_accuracy_rf = sum(accurate_rf)*100/nrow(validationData)
+message("Accuracy of Random Forest = ", format(round(m_accuracy_rf, 2), nsmall=2),"%")
+accurate_nb = c(as.numeric(predict(fit_nb,newdata=validationData[,-ncol(validationData)])==validationData$classe))
+m_accuracy_nb = sum(accurate_nb)*100/nrow(validationData)
+message("Accuracy of Naive Bayes = ", format(round(m_accuracy_nb, 2), nsmall=2),"%")
+accurate_rp = c(as.numeric(predict(fit_rp,newdata=validationData[,-ncol(validationData)])==validationData$classe))
+m_accuracy_rp = sum(accurate_rp)*100/nrow(validationData)
+message("Accuracy of Decision Tree = ", format(round(m_accuracy_rp, 2), nsmall=2),"%")
+```
+
+Obviously the model of Random Forest is the winner. Through the confusion matrix, we can get the same conclusion.
+```{r echo=TRUE}
+confusionMatrix(predict(fit_rf, validationData), validationData$classe)
+confusionMatrix(predict(fit_nb, validationData), validationData$classe)
+confusionMatrix(predict(fit_rp, validationData), validationData$classe)
+par(col=3)
+plot(predict(fit_rf,newdata=validationData[,-ncol(validationData)]),validationData$classe, xlab="Validation", ylab="PredictionModel Set", main="Random Forest", col = c("black","red", "blue","green","yellow"))
+plot(predict(fit_nb,newdata=validationData[,-ncol(validationData)]),validationData$classe, xlab="Validation", ylab="PredictionModel Set", main="Naive Bayes", col = c("black","red", "blue","green","yellow"))
+plot(predict(fit_rp,newdata=validationData[,-ncol(validationData)]),validationData$classe, xlab="Validation", ylab="PredictionModel Set", main="Decision Tree", col = c("black","red", "blue","green","yellow"))
+
+accurate_rf = c(as.numeric(predict(fit_rf,newdata=validationData[,-ncol(validationData)])==validationData$classe))
+m_accuracy_rf = sum(accurate_rf)*100/nrow(validationData)
+message("Accuracy of Random Forest = ", format(round(m_accuracy_rf, 2), nsmall=2),"%")
+accurate_nb = c(as.numeric(predict(fit_nb,newdata=validationData[,-ncol(validationData)])==validationData$classe))
+m_accuracy_nb = sum(accurate_nb)*100/nrow(validationData)
+message("Accuracy of Naive Bayes = ", format(round(m_accuracy_nb, 2), nsmall=2),"%")
+accurate_rp = c(as.numeric(predict(fit_rp,newdata=validationData[,-ncol(validationData)])==validationData$classe))
+m_accuracy_rp = sum(accurate_rp)*100/nrow(validationData)
+message("Accuracy of Decision Tree = ", format(round(m_accuracy_rp, 2), nsmall=2),"%")
+```
+
+Finally, we predict the given 20 different test cases with the Random Forest model we pick.
+```{r echo=TRUE}
+testingClean = testing[, 8:160]
+testingClean[testingClean=='' | testingClean=='NA' | testingClean=='#DIV/0!'] = NA
+testingClean = testingClean[, which(colSums(is.na(testingClean))==0)]
+ptest = predict(fit_rf, testingClean)
+print(ptest)
+```
