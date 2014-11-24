@@ -42,22 +42,21 @@ validationData = trainingClean[-inTrain,]
 We are going to try 3 different models to fit the training data and compare their performance with the validation data. We build each model using 10-fold cross validation.
 
 The first one we use is Random Forest.
-```{r echo=TRUE}
+```{r echo=TRUE, message=FALSE}
 library(randomForest)
 fit_rf = train(classe~., method="rf", data=trainingData, tuneLength=1, ntree=25,
                trControl = trainControl(method = "cv", number = 10))
 ```
 
 The second one is Naive Bayes.
-```{r echo=TRUE}
+```{r echo=TRUE, results="hide", message=FALSE, warning=FALSE}
 library("klaR")
-fit_nb = naiveBayes(classe~., data=trainingData)
 fit_nb = train(classe~., method="nb", data=trainingData,
                trControl = trainControl(method = "cv", number = 10))
 ```
 
 The last one is Decision Tree.
-```{r echo=TRUE}
+```{r echo=TRUE, message=FALSE}
 library(rpart)
 fit_rp = train(classe~., method="rpart", data=trainingData,
                trControl = trainControl(method = "cv", number = 10))
@@ -80,7 +79,7 @@ plot(predict(fit_nb,newdata=validationData[,-ncol(validationData)]),validationDa
 plot(predict(fit_rp,newdata=validationData[,-ncol(validationData)]),validationData$classe, xlab="Validation", ylab="PredictionModel Set", main="Decision Tree", col = c("black","red", "blue","green","yellow"))
 ```
 
-Clearly the model of Random Forest is the winner. The accuracy of it is 99.49%. Let's also look at the confusion matrix of the Random Forest model.
+Clearly the model of Random Forest is the winner. The accuracy of it is 99.49% and out of sample error is 0.51%. Let's also look at the confusion matrix of the Random Forest model.
 ```{r echo=TRUE}
 confusionMatrix(predict(fit_rf, validationData), validationData$classe)
 ```
