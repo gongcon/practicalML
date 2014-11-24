@@ -42,28 +42,28 @@ validationData = trainingClean[-inTrain,]
 We are going to try 3 different models to fit the training data and compare their performance with the validation data. We build each model using 10-fold cross validation.
 
 The first one we use is Random Forest.
-```{r echo=TRUE, message=FALSE}
+```{r echo=TRUE, warning=FALSE}
 library(randomForest)
 fit_rf = train(classe~., method="rf", data=trainingData, tuneLength=1, ntree=25,
                trControl = trainControl(method = "cv", number = 10))
 ```
 
 The second one is Naive Bayes.
-```{r echo=TRUE, results="hide", message=FALSE, warning=FALSE}
+```{r echo=TRUE, warning=FALSE}
 library("klaR")
 fit_nb = train(classe~., method="nb", data=trainingData,
                trControl = trainControl(method = "cv", number = 10))
 ```
 
 The last one is Decision Tree.
-```{r echo=TRUE, message=FALSE}
+```{r echo=TRUE, warning=FALSE}
 library(rpart)
 fit_rp = train(classe~., method="rpart", data=trainingData,
                trControl = trainControl(method = "cv", number = 10))
 ```
 
 For each model, we use the validation data set to test. Let's look at the out of sample accuracy.
-```{r echo=TRUE}
+```{r echo=TRUE, warning=FALSE}
 accurate_rf = c(as.numeric(predict(fit_rf,newdata=validationData[,-ncol(validationData)])==validationData$classe))
 m_accuracy_rf = sum(accurate_rf)*100/nrow(validationData)
 message("Accuracy of Random Forest = ", format(round(m_accuracy_rf, 2), nsmall=2),"%")
