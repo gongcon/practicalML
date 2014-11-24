@@ -1,4 +1,4 @@
-Title
+Person Activity Study
 ========================================================
 
 Synopsis
@@ -18,8 +18,6 @@ testing = read.csv("pml-testing.csv")
 unique(training$user_name)
 ncol(training)
 colnames(training)
-head(training[, 1:30])
-pairs(training[1:10000,1:10])
 ```
 
 ### Cleaning Data
@@ -33,6 +31,7 @@ trainingClean = trainingClean[, which(colSums(is.na(trainingClean))==0)]
 ### Prepare Data
 First of all, we need a validation data set to validate our model. We split the data set to 75% for training and 25% for validating.
 ```{r echo=TRUE}
+library(caret)
 set.seed(31)
 inTrain = createDataPartition(y=trainingClean$classe, p=0.75, list=FALSE)
 trainingData = trainingClean[inTrain,]
@@ -40,11 +39,10 @@ validationData = trainingClean[-inTrain,]
 ```
 
 ### Prediction Model
-We are going to try 3 different models to fit the training data and compare their performance with the validation data.
+We are going to try 3 different models to fit the training data and compare their performance with the validation data. We build each model using 10-fold cross validation.
 
 The first one we use is Random Forest.
 ```{r echo=TRUE}
-library(caret)
 library(randomForest)
 fit_rf = train(classe~., method="rf", data=trainingData, tuneLength=1, ntree=25,
                trControl = trainControl(method = "cv", number = 10))
@@ -56,20 +54,16 @@ library("klaR")
 fit_nb = naiveBayes(classe~., data=trainingData)
 fit_nb = train(classe~., method="nb", data=trainingData,
                trControl = trainControl(method = "cv", number = 10))
-
 ```
 
-Last one we use Decision Tree.
+The last one is Decision Tree.
 ```{r echo=TRUE}
 library(rpart)
 fit_rp = train(classe~., method="rpart", data=trainingData,
                trControl = trainControl(method = "cv", number = 10))
-confusionMatrix(predict(fit_rp, validationData), validationData$classe)
-plot(predict(fit_rp,newdata=validationData[,-ncol(validationData)]),validationData$classe, xlab="Validation", ylab="PredictionModel Set",col = c("black","red", "blue","green","yellow"))
-
 ```
 
-For each model, we use the validation data set to test. Let's look at the accuracy first.
+For each model, we use the validation data set to test. Let's look at the out of sample accuracy.
 ```{r echo=TRUE}
 accurate_rf = c(as.numeric(predict(fit_rf,newdata=validationData[,-ncol(validationData)])==validationData$classe))
 m_accuracy_rf = sum(accurate_rf)*100/nrow(validationData)
@@ -80,29 +74,18 @@ message("Accuracy of Naive Bayes = ", format(round(m_accuracy_nb, 2), nsmall=2),
 accurate_rp = c(as.numeric(predict(fit_rp,newdata=validationData[,-ncol(validationData)])==validationData$classe))
 m_accuracy_rp = sum(accurate_rp)*100/nrow(validationData)
 message("Accuracy of Decision Tree = ", format(round(m_accuracy_rp, 2), nsmall=2),"%")
-```
-
-Obviously the model of Random Forest is the winner. Through the confusion matrix, we can get the same conclusion.
-```{r echo=TRUE}
-confusionMatrix(predict(fit_rf, validationData), validationData$classe)
-confusionMatrix(predict(fit_nb, validationData), validationData$classe)
-confusionMatrix(predict(fit_rp, validationData), validationData$classe)
-par(col=3)
+par(mfrow = c( 1, 3 ))
 plot(predict(fit_rf,newdata=validationData[,-ncol(validationData)]),validationData$classe, xlab="Validation", ylab="PredictionModel Set", main="Random Forest", col = c("black","red", "blue","green","yellow"))
 plot(predict(fit_nb,newdata=validationData[,-ncol(validationData)]),validationData$classe, xlab="Validation", ylab="PredictionModel Set", main="Naive Bayes", col = c("black","red", "blue","green","yellow"))
 plot(predict(fit_rp,newdata=validationData[,-ncol(validationData)]),validationData$classe, xlab="Validation", ylab="PredictionModel Set", main="Decision Tree", col = c("black","red", "blue","green","yellow"))
-
-accurate_rf = c(as.numeric(predict(fit_rf,newdata=validationData[,-ncol(validationData)])==validationData$classe))
-m_accuracy_rf = sum(accurate_rf)*100/nrow(validationData)
-message("Accuracy of Random Forest = ", format(round(m_accuracy_rf, 2), nsmall=2),"%")
-accurate_nb = c(as.numeric(predict(fit_nb,newdata=validationData[,-ncol(validationData)])==validationData$classe))
-m_accuracy_nb = sum(accurate_nb)*100/nrow(validationData)
-message("Accuracy of Naive Bayes = ", format(round(m_accuracy_nb, 2), nsmall=2),"%")
-accurate_rp = c(as.numeric(predict(fit_rp,newdata=validationData[,-ncol(validationData)])==validationData$classe))
-m_accuracy_rp = sum(accurate_rp)*100/nrow(validationData)
-message("Accuracy of Decision Tree = ", format(round(m_accuracy_rp, 2), nsmall=2),"%")
 ```
 
+Clearly the model of Random Forest is the winner. The accuracy of it is 99.49%. Let's also look at the confusion matrix of the Random Forest model.
+```{r echo=TRUE}
+confusionMatrix(predict(fit_rf, validationData), validationData$classe)
+```
+
+### Prediction
 Finally, we predict the given 20 different test cases with the Random Forest model we pick.
 ```{r echo=TRUE}
 testingClean = testing[, 8:160]
